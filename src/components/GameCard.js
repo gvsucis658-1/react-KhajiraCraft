@@ -2,7 +2,16 @@ import React from 'react';
 
 const GameCard = ({ game, onEdit, onDelete }) => {
   const ratingColor = game.rating >= 4.5 ? 'bg-green-500' :
-                     game.rating >= 4.0 ? 'bg-yellow-500' : 'bg-red-500';
+                     game.rating >= 4.0 ? 'bg-yellow-500' : 
+                     game.rating >= 3.0 ? 'bg-orange-500' : 'bg-red-500';
+
+  const handleDelete = async () => {
+    try {
+      await onDelete(game.id); // Calls App.js's handleDelete
+    } catch (err) {
+      console.error("Delete failed:", err);
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow">
@@ -10,14 +19,16 @@ const GameCard = ({ game, onEdit, onDelete }) => {
         <div className="flex justify-between items-start mb-4">
           <h2 className="text-xl font-bold text-gray-800">{game.title}</h2>
           <span className={`${ratingColor} text-white text-sm px-3 py-1 rounded-full`}>
-            {game.rating}/5
+          {(game.rating ?? 0).toFixed(1)}/5
           </span>
         </div>
 
         <div className="space-y-2 text-gray-600">
           <p><span className="font-semibold">Genre:</span> {game.genre}</p>
           <p><span className="font-semibold">Released:</span> {game.releaseYear}</p>
-          <p><span className="font-semibold">Platforms:</span> {game.platforms.join(', ')}</p>
+          <p>
+            <span className="font-semibold">Platforms:</span> {game.platforms?.join(', ') || 'None'}
+          </p>
         </div>
 
         <div className="flex items-center justify-between mt-4">
@@ -37,13 +48,15 @@ const GameCard = ({ game, onEdit, onDelete }) => {
           <div className="flex gap-2">
             <button 
               onClick={() => onEdit(game)}
-              className="text-blue-600 hover:text-blue-800"
+              className="text-blue-600 hover:text-blue-800 transition-colors"
+              aria-label="Edit game"
             >
               Edit
             </button>
             <button 
-              onClick={() => onDelete(game.id)}
-              className="text-red-600 hover:text-red-800"
+              onClick={handleDelete}
+              className="text-red-600 hover:text-red-800 transition-colors"
+              aria-label="Delete game"
             >
               Delete
             </button>
