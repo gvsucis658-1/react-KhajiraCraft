@@ -1,0 +1,21 @@
+{
+  "games": [
+    {
+      "id": "d183",
+      "platforms": [
+        "Mobile"
+      ],
+      "title": "dsf",
+      "rating": 3.5,
+      "releaseYear": 2023
+    },
+    {
+      "id": "55e9",
+      "platforms": [
+        "PS5"
+      ],
+      "rating": 4.5,
+      "title": "The Maze"
+    }
+  ]
+}
