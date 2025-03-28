@@ -1,154 +1,148 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import GameForm from './components/GameForm';
 import GameCard from './components/GameCard';
 
-
-const initialGames = [
-  {
-    id: 1,
-    title: "The Legend of Zelda: Breath of the Wild",
-    genre: "Action-Adventure",
-    platforms: ["Switch"],
-    releaseYear: 2017,
-    rating: 4.2,
-    completed: true,
-    multiplayer: false
-  },
-  {
-    id: 2,
-    title: "Elden Ring",
-    genre: "Action RPG",
-    platforms: ["PS5", "Xbox", "PC"],
-    releaseYear: 2022,
-    rating: 4.8,
-    completed: false,
-    multiplayer: true
-  },
-  {
-    id: 3,
-    title: "Stardew Valley",
-    genre: "Simulation",
-    platforms: ["Switch", "PC", "PS4", "Xbox", "Mobile"],
-    releaseYear: 2016,
-    rating: 4.7,
-    completed: true,
-    multiplayer: true
-  },
-  {
-    id: 4,
-    title: "Resident Evil 4",
-    genre: "Survival Horror",
-    platforms: ["PS5", "Xbox", "PC"],
-    releaseYear: 2023,
-    rating: 4.6,
-    completed: false,
-    multiplayer: false
-  },
-  {
-    id: 5,
-    title: "Hollow Knight",
-    genre: "Metroidvania",
-    platforms: ["Switch", "PC", "PS4", "Xbox"],
-    releaseYear: 2017,
-    rating: 3.8,
-    completed: true,
-    multiplayer: false
-  },
-  {
-    id: 6,
-    title: "Sid Meier’s Civilization VI",
-    genre: "Strategy",
-    platforms: ["PC", "Switch", "PS4", "Xbox"],
-    releaseYear: 2016,
-    rating: 4.5,
-    completed: false,
-    multiplayer: true
-  },
-  {
-    id: 7,
-    title: "Rocket League",
-    genre: "Sports",
-    platforms: ["PS4", "Xbox", "PC", "Switch"],
-    releaseYear: 2015,
-    rating: 4.3,
-    completed: false,
-    multiplayer: true
-  },
-  {
-    id: 8,
-    title: "Undertale",
-    genre: "RPG",
-    platforms: ["PC", "PS4", "Switch"],
-    releaseYear: 2015,
-    rating: 4.9,
-    completed: true,
-    multiplayer: false
-  },
-];
-
-
 function App() {
-  const [games, setGames] = useState(initialGames);
+  const [games, setGames] = useState([]);
   const [editingGame, setEditingGame] = useState(null);
-  const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  const API_URL = 'http://localhost:3001/games';
+  const fetchOptions = {
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    },
+    cache: 'no-store'
+  };
 
-  // Add or Update game
-  const handleSubmit = (gameData) => {
-    if (gameData.id) {
-      // Update existing game
-      setGames(games.map(game => 
-        game.id === gameData.id ? gameData : game
-      ));
-    } else {
-      // Add new game
-      setGames([...games, { ...gameData, id: Date.now() }]);
+  // Fetch all games with cache busting
+  const fetchGames = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_URL}?_=${Date.now()}`, fetchOptions);
+      if (!response.ok) throw new Error('Network response was not ok');
+      const data = await response.json();
+      setGames(data);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-    setShowForm(false);
-    setEditingGame(null);
   };
 
-  // Delete game
-  const handleDelete = (id) => {
-    setGames(games.filter(game => game.id !== id));
+  const handleSubmit = async (gameData) => {
+    try {
+      setLoading(true);
+      const url = gameData.id ? `${API_URL}/${gameData.id}` : API_URL;
+      const method = gameData.id ? 'PUT' : 'POST';
+  
+      console.log(`[${method}] ${url}`, gameData); // Debug log
+  
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(gameData)
+      });
+  
+      if (!response.ok) throw new Error(gameData.id ? 'Update failed' : 'Creation failed');
+  
+      await fetchGames();
+      setEditingGame(null);
+    } catch (err) {
+      console.error('Submit error:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
+  
+
+  const handleDelete = async (id) => {
+    try {
+      setLoading(true);
+      console.log(`[DELETE] ${API_URL}/${id}`); // Debug log
+  
+      const response = await fetch(`${API_URL}/${id}`, {
+        method: 'DELETE'
+      });
+  
+      if (!response.ok) throw new Error('Delete failed');
+  
+      setGames(games.filter(game => game.id !== id));
+      await fetchGames();
+    } catch (err) {
+      console.error('Delete error:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+
+  // Load games on component mount
+  useEffect(() => {
+    fetchGames();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-4xl font-bold text-gray-800 mb-8 text-center">
-          GameHorizon
+          My Game Collection
         </h1>
 
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+            Error: {error}
+          </div>
+        )}
+
         <div className="mb-6 text-center">
-          <button 
-            onClick={() => setShowForm(true)}
+          <button
+            onClick={() => setEditingGame({})}
             className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors"
+            disabled={loading}
           >
-            Add New Game
+            {loading ? 'Loading...' : 'Add New Game'}
           </button>
         </div>
 
-        {(showForm || editingGame) && (
+        {editingGame && (
           <GameForm
             game={editingGame}
             onSubmit={handleSubmit}
             onCancel={() => {
-              setShowForm(false);
               setEditingGame(null);
+              setError(null);
             }}
           />
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {games.map(game => (
-            <GameCard 
-              key={game.id}
-              game={game}
-              onEdit={setEditingGame}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
+        {loading && games.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
+        ) : games.length === 0 ? (
+          <div className="text-center py-8 bg-white rounded-lg shadow">
+            <p className="text-gray-600">No games found in your collection.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {games.map(game => (
+              <GameCard
+                key={game.id}
+                game={game}
+                onEdit={() => setEditingGame(game)}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
